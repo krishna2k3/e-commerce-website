@@ -1,6 +1,8 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import User from "../models/userModel.js";
-import generateToken from "../utils/generateToken.js";
+import { generateToken, generateRefreshToken } from "../utils/generateToken.js";
+import redis from "../config/redis.js";
+import jwt from "jsonwebtoken";
 
 // @desc    Auth user & get token
 // @route   POST /api/users/login
@@ -12,6 +14,7 @@ const authUser = asyncHandler(async (req, res) => {
 
   if (user && (await user.matchPassword(password))) {
     generateToken(res, user._id);
+    generateRefreshToken(res, user._id);
 
     res.status(200).json({
       _id: user._id,
@@ -46,6 +49,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   if (user) {
     generateToken(res, user._id);
+    generateRefreshToken(res, user._id);
 
     res.status(201).json({
       _id: user._id,
@@ -64,6 +68,15 @@ const registerUser = asyncHandler(async (req, res) => {
 // @access  Private
 const logoutUser = asyncHandler(async (req, res) => {
   res.cookie("jwt", "", {
+    httpOnly: true,
+    expires: new Date(0),
+  });
+  const decodedToken = jwt.verify(
+    req.cookies.refresh,
+    process.env.REFRESH_SECRET
+  );
+  redis.del(decodedToken.userId);
+  res.cookie("refresh", "", {
     httpOnly: true,
     expires: new Date(0),
   });

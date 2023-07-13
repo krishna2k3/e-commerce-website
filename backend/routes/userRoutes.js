@@ -25,5 +25,6 @@ router
   .delete(protect, admin, deleteUser)
   .get(protect, admin, getUserByID)
   .put(protect, admin, updateUser);
+router.post("/refresh-token")
 
 export default router;
